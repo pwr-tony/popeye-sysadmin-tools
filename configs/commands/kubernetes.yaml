@@ -1,0 +1,381 @@
+category: kubernetes
+icon: "☸️"
+commands:
+  - name: get-pods
+    description: List pods in namespace
+    params:
+      - name: namespace
+        type: string
+        default: "default"
+        prompt: "Namespace (or 'all' for all namespaces)"
+    command: |
+      if [ "{{.namespace}}" = "all" ]; then
+        kubectl get pods -A
+      else
+        kubectl get pods -n {{.namespace}}
+      fi
+    sudo: false
+
+  - name: get-pods-wide
+    description: List pods with extra info (node, IP)
+    params:
+      - name: namespace
+        type: string
+        default: "default"
+        prompt: "Namespace"
+    command: kubectl get pods -n {{.namespace}} -o wide
+    sudo: false
+
+  - name: get-deployments
+    description: List deployments
+    params:
+      - name: namespace
+        type: string
+        default: "default"
+        prompt: "Namespace"
+    command: kubectl get deployments -n {{.namespace}}
+    sudo: false
+
+  - name: get-services
+    description: List services
+    params:
+      - name: namespace
+        type: string
+        default: "default"
+        prompt: "Namespace"
+    command: kubectl get svc -n {{.namespace}}
+    sudo: false
+
+  - name: get-nodes
+    description: List cluster nodes
+    command: kubectl get nodes -o wide
+    sudo: false
+
+  - name: get-namespaces
+    description: List all namespaces
+    command: kubectl get namespaces
+    sudo: false
+
+  - name: describe-pod
+    description: Describe a pod
+    params:
+      - name: pod
+        type: string
+        required: true
+        prompt: "Pod name"
+      - name: namespace
+        type: string
+        default: "default"
+        prompt: "Namespace"
+    command: kubectl describe pod {{.pod}} -n {{.namespace}}
+    sudo: false
+
+  - name: logs
+    description: Get pod logs
+    params:
+      - name: pod
+        type: string
+        required: true
+        prompt: "Pod name"
+      - name: namespace
+        type: string
+        default: "default"
+        prompt: "Namespace"
+      - name: lines
+        type: string
+        default: "100"
+        prompt: "Number of lines"
+    command: kubectl logs {{.pod}} -n {{.namespace}} --tail={{.lines}}
+    sudo: false
+
+  - name: logs-follow
+    description: Follow pod logs in real-time
+    params:
+      - name: pod
+        type: string
+        required: true
+        prompt: "Pod name"
+      - name: namespace
+        type: string
+        default: "default"
+        prompt: "Namespace"
+    command: kubectl logs {{.pod}} -n {{.namespace}} -f
+    sudo: false
+
+  - name: logs-previous
+    description: Get logs from previous container instance
+    params:
+      - name: pod
+        type: string
+        required: true
+        prompt: "Pod name"
+      - name: namespace
+        type: string
+        default: "default"
+        prompt: "Namespace"
+    command: kubectl logs {{.pod}} -n {{.namespace}} --previous
+    sudo: false
+
+  - name: exec
+    description: Execute command in pod
+    params:
+      - name: pod
+        type: string
+        required: true
+        prompt: "Pod name"
+      - name: namespace
+        type: string
+        default: "default"
+        prompt: "Namespace"
+      - name: cmd
+        type: string
+        default: "/bin/sh"
+        prompt: "Command to execute"
+    command: kubectl exec -it {{.pod}} -n {{.namespace}} -- {{.cmd}}
+    sudo: false
+
+  - name: port-forward
+    description: Forward local port to pod
+    params:
+      - name: pod
+        type: string
+        required: true
+        prompt: "Pod name"
+      - name: namespace
+        type: string
+        default: "default"
+        prompt: "Namespace"
+      - name: ports
+        type: string
+        required: true
+        prompt: "Ports (local:remote, e.g., 8080:80)"
+    command: kubectl port-forward {{.pod}} -n {{.namespace}} {{.ports}}
+    sudo: false
+
+  - name: scale
+    description: Scale deployment replicas
+    params:
+      - name: deployment
+        type: string
+        required: true
+        prompt: "Deployment name"
+      - name: namespace
+        type: string
+        default: "default"
+        prompt: "Namespace"
+      - name: replicas
+        type: string
+        required: true
+        prompt: "Number of replicas"
+    command: kubectl scale deployment {{.deployment}} -n {{.namespace}} --replicas={{.replicas}}
+    sudo: false
+
+  - name: restart
+    description: Restart deployment (rollout restart)
+    params:
+      - name: deployment
+        type: string
+        required: true
+        prompt: "Deployment name"
+      - name: namespace
+        type: string
+        default: "default"
+        prompt: "Namespace"
+    command: kubectl rollout restart deployment {{.deployment}} -n {{.namespace}}
+    sudo: false
+
+  - name: rollout-status
+    description: Check rollout status
+    params:
+      - name: deployment
+        type: string
+        required: true
+        prompt: "Deployment name"
+      - name: namespace
+        type: string
+        default: "default"
+        prompt: "Namespace"
+    command: kubectl rollout status deployment {{.deployment}} -n {{.namespace}}
+    sudo: false
+
+  - name: rollout-history
+    description: View rollout history
+    params:
+      - name: deployment
+        type: string
+        required: true
+        prompt: "Deployment name"
+      - name: namespace
+        type: string
+        default: "default"
+        prompt: "Namespace"
+    command: kubectl rollout history deployment {{.deployment}} -n {{.namespace}}
+    sudo: false
+
+  - name: rollback
+    description: Rollback deployment to previous revision
+    params:
+      - name: deployment
+        type: string
+        required: true
+        prompt: "Deployment name"
+      - name: namespace
+        type: string
+        default: "default"
+        prompt: "Namespace"
+    command: kubectl rollout undo deployment {{.deployment}} -n {{.namespace}}
+    sudo: false
+
+  - name: get-events
+    description: Get cluster events
+    params:
+      - name: namespace
+        type: string
+        default: "default"
+        prompt: "Namespace"
+    command: kubectl get events -n {{.namespace}} --sort-by='.lastTimestamp'
+    sudo: false
+
+  - name: top-pods
+    description: Show pod resource usage
+    params:
+      - name: namespace
+        type: string
+        default: "default"
+        prompt: "Namespace"
+    command: kubectl top pods -n {{.namespace}}
+    sudo: false
+
+  - name: top-nodes
+    description: Show node resource usage
+    command: kubectl top nodes
+    sudo: false
+
+  - name: get-configmaps
+    description: List configmaps
+    params:
+      - name: namespace
+        type: string
+        default: "default"
+        prompt: "Namespace"
+    command: kubectl get configmaps -n {{.namespace}}
+    sudo: false
+
+  - name: get-secrets
+    description: List secrets
+    params:
+      - name: namespace
+        type: string
+        default: "default"
+        prompt: "Namespace"
+    command: kubectl get secrets -n {{.namespace}}
+    sudo: false
+
+  - name: get-ingress
+    description: List ingress resources
+    params:
+      - name: namespace
+        type: string
+        default: "default"
+        prompt: "Namespace"
+    command: kubectl get ingress -n {{.namespace}}
+    sudo: false
+
+  - name: get-pvc
+    description: List persistent volume claims
+    params:
+      - name: namespace
+        type: string
+        default: "default"
+        prompt: "Namespace"
+    command: kubectl get pvc -n {{.namespace}}
+    sudo: false
+
+  - name: get-pv
+    description: List persistent volumes
+    command: kubectl get pv
+    sudo: false
+
+  - name: cluster-info
+    description: Show cluster info
+    command: kubectl cluster-info
+    sudo: false
+
+  - name: api-resources
+    description: List available API resources
+    command: kubectl api-resources
+    sudo: false
+
+  - name: context-current
+    description: Show current context
+    command: kubectl config current-context
+    sudo: false
+
+  - name: context-list
+    description: List available contexts
+    command: kubectl config get-contexts
+    sudo: false
+
+  - name: context-switch
+    description: Switch to another context
+    params:
+      - name: context
+        type: string
+        required: true
+        prompt: "Context name"
+    command: kubectl config use-context {{.context}}
+    sudo: false
+
+  - name: apply
+    description: Apply manifest file
+    params:
+      - name: file
+        type: string
+        required: true
+        prompt: "File path or URL"
+    command: kubectl apply -f {{.file}}
+    sudo: false
+
+  - name: delete-pod
+    description: Delete a pod
+    params:
+      - name: pod
+        type: string
+        required: true
+        prompt: "Pod name"
+      - name: namespace
+        type: string
+        default: "default"
+        prompt: "Namespace"
+    command: kubectl delete pod {{.pod}} -n {{.namespace}}
+    sudo: false
+
+  - name: cordon
+    description: Mark node as unschedulable
+    params:
+      - name: node
+        type: string
+        required: true
+        prompt: "Node name"
+    command: kubectl cordon {{.node}}
+    sudo: false
+
+  - name: uncordon
+    description: Mark node as schedulable
+    params:
+      - name: node
+        type: string
+        required: true
+        prompt: "Node name"
+    command: kubectl uncordon {{.node}}
+    sudo: false
+
+  - name: drain
+    description: Drain node for maintenance
+    params:
+      - name: node
+        type: string
+        required: true
+        prompt: "Node name"
+    command: kubectl drain {{.node}} --ignore-daemonsets --delete-emptydir-data
+    sudo: false

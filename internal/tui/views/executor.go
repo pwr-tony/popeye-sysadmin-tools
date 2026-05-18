@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/textarea"
+	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/pwr-tony/popeye/internal/commands"
@@ -15,30 +15,21 @@ type ExecutorState int
 
 const (
 	StateParams ExecutorState = iota
-	StateRunning
-	StateDone
+	StateShow
 )
-
-type OutputMsg string
-type DoneMsg struct {
-	ExitCode int
-	Error    error
-}
 
 type ExecutorView struct {
 	command      *commands.Command
 	category     string
 	icon         string
-	executor     *commands.Executor
 	params       map[string]string
 	paramInputs  []textinput.Model
 	currentParam int
-	output       textarea.Model
 	state        ExecutorState
 	width        int
 	height       int
-	exitCode     int
-	execError    error
+	finalCmd     string
+	copied       bool
 }
 
 func NewExecutorView(cmd *commands.Command, category, icon string) *ExecutorView {
@@ -61,25 +52,18 @@ func NewExecutorView(cmd *commands.Command, category, icon string) *ExecutorView
 		inputs[i] = ti
 	}
 
-	ta := textarea.New()
-	ta.SetWidth(80)
-	ta.SetHeight(20)
-	ta.ShowLineNumbers = false
-
 	state := StateParams
 	if len(cmd.Params) == 0 {
-		state = StateRunning
+		state = StateShow
 	}
 
 	return &ExecutorView{
 		command:      cmd,
 		category:     category,
 		icon:         icon,
-		executor:     commands.NewExecutor(),
 		params:       params,
 		paramInputs:  inputs,
 		currentParam: 0,
-		output:       ta,
 		state:        state,
 	}
 }
@@ -87,8 +71,6 @@ func NewExecutorView(cmd *commands.Command, category, icon string) *ExecutorView
 func (v *ExecutorView) SetSize(width, height int) {
 	v.width = width
 	v.height = height
-	v.output.SetWidth(width - 10)
-	v.output.SetHeight(height - 15)
 }
 
 func (v *ExecutorView) Update(msg tea.Msg) (*ExecutorView, tea.Cmd) {
@@ -96,13 +78,21 @@ func (v *ExecutorView) Update(msg tea.Msg) (*ExecutorView, tea.Cmd) {
 	case tea.KeyMsg:
 		if v.state == StateParams {
 			switch msg.String() {
-			case "tab", "down", "enter":
+			case "tab", "down":
 				if v.currentParam < len(v.paramInputs)-1 {
 					v.paramInputs[v.currentParam].Blur()
 					v.currentParam++
 					v.paramInputs[v.currentParam].Focus()
-				} else if msg.String() == "enter" {
-					return v, v.executeCommand()
+				}
+				return v, nil
+			case "enter":
+				if v.currentParam < len(v.paramInputs)-1 {
+					v.paramInputs[v.currentParam].Blur()
+					v.currentParam++
+					v.paramInputs[v.currentParam].Focus()
+				} else {
+					v.buildCommand()
+					v.state = StateShow
 				}
 				return v, nil
 			case "shift+tab", "up":
@@ -119,50 +109,41 @@ func (v *ExecutorView) Update(msg tea.Msg) (*ExecutorView, tea.Cmd) {
 			return v, cmd
 		}
 
-	case OutputMsg:
-		current := v.output.Value()
-		v.output.SetValue(current + string(msg) + "\n")
-		return v, v.waitForOutput()
-
-	case DoneMsg:
-		v.state = StateDone
-		v.exitCode = msg.ExitCode
-		v.execError = msg.Error
-		return v, nil
+		if v.state == StateShow {
+			switch msg.String() {
+			case "c":
+				if err := clipboard.WriteAll(v.finalCmd); err == nil {
+					v.copied = true
+				}
+				return v, nil
+			}
+		}
 	}
 
 	return v, nil
 }
 
-func (v *ExecutorView) executeCommand() tea.Cmd {
+func (v *ExecutorView) buildCommand() {
 	for i, p := range v.command.Params {
-		v.params[p.Name] = v.paramInputs[i].Value()
+		val := v.paramInputs[i].Value()
+		if val == "" && p.Default != "" {
+			val = p.Default
+		}
+		v.params[p.Name] = val
 	}
 
-	v.state = StateRunning
-
-	return func() tea.Msg {
-		cmdStr, err := v.executor.BuildCommand(v.command, v.params)
-		if err != nil {
-			return DoneMsg{Error: err}
-		}
-
-		result := v.executor.Execute(cmdStr)
-		return DoneMsg{
-			ExitCode: result.ExitCode,
-			Error:    result.Error,
-		}
+	cmdStr := v.command.Command
+	for name, value := range v.params {
+		cmdStr = strings.ReplaceAll(cmdStr, "{{."+name+"}}", value)
 	}
-}
 
-func (v *ExecutorView) waitForOutput() tea.Cmd {
-	return func() tea.Msg {
-		line, ok := <-v.executor.OutputChan
-		if !ok {
-			return nil
-		}
-		return OutputMsg(line)
+	cmdStr = strings.TrimSpace(cmdStr)
+
+	if v.command.Sudo {
+		cmdStr = "sudo " + cmdStr
 	}
+
+	v.finalCmd = cmdStr
 }
 
 func (v *ExecutorView) View() string {
@@ -170,10 +151,12 @@ func (v *ExecutorView) View() string {
 
 	b.WriteString(ui.TitleStyle.Render(fmt.Sprintf("%s %s/%s", v.icon, v.category, v.command.Name)))
 	b.WriteString("\n\n")
+	b.WriteString(ui.MutedStyle.Render(v.command.Description))
+	b.WriteString("\n\n")
 
 	switch v.state {
 	case StateParams:
-		b.WriteString(ui.SubtitleStyle.Render("Enter parameters:"))
+		b.WriteString(ui.SubtitleStyle.Render("Parameters:"))
 		b.WriteString("\n\n")
 
 		for i, p := range v.command.Params {
@@ -181,40 +164,46 @@ func (v *ExecutorView) View() string {
 			if p.Required {
 				label += " *"
 			}
-			b.WriteString(fmt.Sprintf("%s: ", label))
+			if p.Default != "" {
+				label += fmt.Sprintf(" [%s]", p.Default)
+			}
+			b.WriteString(fmt.Sprintf("  %s: ", label))
 			b.WriteString(v.paramInputs[i].View())
 			b.WriteString("\n")
 		}
 
 		b.WriteString("\n")
-		b.WriteString(ui.HelpStyle.Render("Tab/Enter: next • Shift+Tab: prev • Enter on last: execute"))
+		b.WriteString(ui.HelpStyle.Render("Tab/Enter: next field • Enter on last: show command • Esc: back"))
 
-	case StateRunning:
-		b.WriteString(ui.SubtitleStyle.Render("Running..."))
-		b.WriteString("\n\n")
-		b.WriteString(ui.OutputStyle.Render(v.output.Value()))
-
-	case StateDone:
-		if v.execError != nil {
-			b.WriteString(ui.ErrorStyle.Render(fmt.Sprintf("Error: %v", v.execError)))
-		} else if v.exitCode != 0 {
-			b.WriteString(ui.ErrorStyle.Render(fmt.Sprintf("Exit code: %d", v.exitCode)))
-		} else {
-			b.WriteString(ui.SuccessStyle.Render("Command completed successfully"))
+	case StateShow:
+		if v.finalCmd == "" {
+			v.buildCommand()
 		}
+
+		b.WriteString(ui.SubtitleStyle.Render("Command:"))
 		b.WriteString("\n\n")
-		b.WriteString(ui.OutputStyle.Render(v.output.Value()))
-		b.WriteString("\n")
-		b.WriteString(ui.HelpStyle.Render("Press Esc to go back"))
+		b.WriteString(ui.OutputStyle.Render(v.finalCmd))
+		b.WriteString("\n\n")
+
+		if v.command.Sudo {
+			b.WriteString(ui.ErrorStyle.Render("⚠ Requires sudo"))
+			b.WriteString("\n\n")
+		}
+
+		if v.copied {
+			b.WriteString(ui.SuccessStyle.Render("✓ Copied to clipboard!"))
+		} else {
+			b.WriteString(ui.HelpStyle.Render("c: copy to clipboard • Esc: back"))
+		}
 	}
 
 	return b.String()
 }
 
 func (v *ExecutorView) IsReady() bool {
-	return v.state == StateRunning && len(v.command.Params) == 0
+	return v.state == StateShow && len(v.command.Params) == 0
 }
 
 func (v *ExecutorView) StartExecution() tea.Cmd {
-	return v.executeCommand()
+	return nil
 }
