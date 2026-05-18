@@ -1,0 +1,92 @@
+category: firewall
+icon: "🔥"
+commands:
+  - name: add-port
+    description: Open port in firewalld
+    params:
+      - name: port
+        type: string
+        required: true
+        prompt: "Port (e.g., 8080/tcp)"
+      - name: zone
+        type: string
+        default: "public"
+        prompt: "Zone"
+    command: |
+      firewall-cmd --zone={{.zone}} --add-port={{.port}} --permanent && firewall-cmd --reload
+    sudo: true
+
+  - name: remove-port
+    description: Close port in firewalld
+    params:
+      - name: port
+        type: string
+        required: true
+        prompt: "Port (e.g., 8080/tcp)"
+      - name: zone
+        type: string
+        default: "public"
+        prompt: "Zone"
+    command: |
+      firewall-cmd --zone={{.zone}} --remove-port={{.port}} --permanent && firewall-cmd --reload
+    sudo: true
+
+  - name: list-ports
+    description: List open ports
+    params:
+      - name: zone
+        type: string
+        default: "public"
+        prompt: "Zone"
+    command: firewall-cmd --zone={{.zone}} --list-ports
+    sudo: true
+
+  - name: list-all
+    description: List all firewall rules
+    command: firewall-cmd --list-all
+    sudo: true
+
+  - name: reload
+    description: Reload firewall configuration
+    command: firewall-cmd --reload
+    sudo: true
+
+  - name: list-zones
+    description: List all available zones
+    command: firewall-cmd --get-zones
+    sudo: true
+
+  - name: active-zones
+    description: Show active zones
+    command: firewall-cmd --get-active-zones
+    sudo: true
+
+  - name: add-service
+    description: Add service to firewall
+    params:
+      - name: service
+        type: string
+        required: true
+        prompt: "Service name (e.g., http, https, ssh)"
+      - name: zone
+        type: string
+        default: "public"
+        prompt: "Zone"
+    command: |
+      firewall-cmd --zone={{.zone}} --add-service={{.service}} --permanent && firewall-cmd --reload
+    sudo: true
+
+  - name: remove-service
+    description: Remove service from firewall
+    params:
+      - name: service
+        type: string
+        required: true
+        prompt: "Service name"
+      - name: zone
+        type: string
+        default: "public"
+        prompt: "Zone"
+    command: |
+      firewall-cmd --zone={{.zone}} --remove-service={{.service}} --permanent && firewall-cmd --reload
+    sudo: true

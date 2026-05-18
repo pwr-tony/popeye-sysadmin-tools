@@ -1,0 +1,97 @@
+category: users
+icon: "👤"
+commands:
+  - name: list-users
+    description: List system users
+    command: cat /etc/passwd | column -t -s ':'
+    sudo: false
+
+  - name: list-groups
+    description: List system groups
+    command: cat /etc/group | column -t -s ':'
+    sudo: false
+
+  - name: last-logins
+    description: Show last logins
+    params:
+      - name: count
+        type: string
+        default: "20"
+        prompt: "Number of entries"
+    command: last -n {{.count}}
+    sudo: false
+
+  - name: who
+    description: Show logged in users
+    command: who -a
+    sudo: false
+
+  - name: w
+    description: Show who is logged in and what they are doing
+    command: w
+    sudo: false
+
+  - name: failed-logins
+    description: Show failed login attempts
+    params:
+      - name: count
+        type: string
+        default: "20"
+        prompt: "Number of entries"
+    command: lastb -n {{.count}} 2>/dev/null || journalctl _SYSTEMD_UNIT=sshd.service | grep -i "failed" | tail -n {{.count}}
+    sudo: true
+
+  - name: user-info
+    description: Show user information
+    params:
+      - name: username
+        type: string
+        required: true
+        prompt: "Username"
+    command: id {{.username}} && echo "---" && chage -l {{.username}} 2>/dev/null || true
+    sudo: true
+
+  - name: user-processes
+    description: Show processes by user
+    params:
+      - name: username
+        type: string
+        required: true
+        prompt: "Username"
+    command: ps -u {{.username}} -o pid,ppid,%cpu,%mem,start,time,cmd
+    sudo: false
+
+  - name: sudo-users
+    description: List users with sudo access
+    command: getent group sudo wheel 2>/dev/null | cut -d':' -f4
+    sudo: false
+
+  - name: locked-users
+    description: Show locked user accounts
+    command: cat /etc/shadow | awk -F':' '$2 ~ /^!/ || $2 ~ /^\*/ {print $1}'
+    sudo: true
+
+  - name: password-policy
+    description: Show password policy
+    command: cat /etc/login.defs | grep -E "^PASS_|^LOGIN_" | grep -v "^#"
+    sudo: false
+
+  - name: ssh-keys
+    description: List SSH authorized keys for user
+    params:
+      - name: username
+        type: string
+        required: true
+        prompt: "Username"
+    command: cat /home/{{.username}}/.ssh/authorized_keys 2>/dev/null || echo "No authorized_keys file"
+    sudo: true
+
+  - name: user-crontabs
+    description: Show user crontab
+    params:
+      - name: username
+        type: string
+        required: true
+        prompt: "Username"
+    command: crontab -l -u {{.username}} 2>/dev/null || echo "No crontab"
+    sudo: true

@@ -1,0 +1,103 @@
+category: filesystem
+icon: "💾"
+commands:
+  - name: disk-usage
+    description: Show disk usage
+    command: df -h
+    sudo: false
+
+  - name: disk-usage-detail
+    description: Show detailed disk usage by mount
+    command: df -hT
+    sudo: false
+
+  - name: mount-list
+    description: List mounted filesystems
+    command: mount | column -t
+    sudo: false
+
+  - name: inode-usage
+    description: Show inode usage
+    command: df -i
+    sudo: false
+
+  - name: largest-files
+    description: Find largest files in directory
+    params:
+      - name: path
+        type: string
+        default: "/"
+        prompt: "Directory to scan"
+      - name: count
+        type: string
+        default: "20"
+        prompt: "Number of files"
+    command: du -ah {{.path}} 2>/dev/null | sort -rh | head -n {{.count}}
+    sudo: true
+
+  - name: largest-dirs
+    description: Find largest directories
+    params:
+      - name: path
+        type: string
+        default: "/"
+        prompt: "Directory to scan"
+      - name: count
+        type: string
+        default: "20"
+        prompt: "Number of directories"
+    command: du -h --max-depth=1 {{.path}} 2>/dev/null | sort -rh | head -n {{.count}}
+    sudo: true
+
+  - name: open-files
+    description: Show open files by process
+    params:
+      - name: process
+        type: string
+        required: true
+        prompt: "Process name"
+    command: lsof -c {{.process}}
+    sudo: true
+
+  - name: find-large
+    description: Find files larger than size
+    params:
+      - name: path
+        type: string
+        default: "/"
+        prompt: "Directory to search"
+      - name: size
+        type: string
+        default: "100M"
+        prompt: "Minimum size (e.g., 100M, 1G)"
+    command: find {{.path}} -type f -size +{{.size}} -exec ls -lh {} \; 2>/dev/null
+    sudo: true
+
+  - name: find-modified
+    description: Find recently modified files
+    params:
+      - name: path
+        type: string
+        default: "/"
+        prompt: "Directory to search"
+      - name: days
+        type: string
+        default: "1"
+        prompt: "Modified in last N days"
+    command: find {{.path}} -type f -mtime -{{.days}} -ls 2>/dev/null | head -50
+    sudo: true
+
+  - name: lvm-status
+    description: Show LVM volume status
+    command: lvs && echo "---" && vgs && echo "---" && pvs
+    sudo: true
+
+  - name: smart-status
+    description: Show SMART disk status
+    params:
+      - name: device
+        type: string
+        default: "/dev/sda"
+        prompt: "Device (e.g., /dev/sda)"
+    command: smartctl -a {{.device}}
+    sudo: true

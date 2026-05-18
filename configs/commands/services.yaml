@@ -1,0 +1,116 @@
+category: services
+icon: "⚙️"
+commands:
+  - name: status
+    description: Check service status
+    params:
+      - name: service
+        type: string
+        required: true
+        prompt: "Service name"
+    command: systemctl status {{.service}}
+    sudo: true
+
+  - name: start
+    description: Start a service
+    params:
+      - name: service
+        type: string
+        required: true
+        prompt: "Service name"
+    command: systemctl start {{.service}}
+    sudo: true
+
+  - name: stop
+    description: Stop a service
+    params:
+      - name: service
+        type: string
+        required: true
+        prompt: "Service name"
+    command: systemctl stop {{.service}}
+    sudo: true
+
+  - name: restart
+    description: Restart a service
+    params:
+      - name: service
+        type: string
+        required: true
+        prompt: "Service name"
+    command: systemctl restart {{.service}}
+    sudo: true
+
+  - name: enable
+    description: Enable service at boot
+    params:
+      - name: service
+        type: string
+        required: true
+        prompt: "Service name"
+    command: systemctl enable {{.service}}
+    sudo: true
+
+  - name: disable
+    description: Disable service at boot
+    params:
+      - name: service
+        type: string
+        required: true
+        prompt: "Service name"
+    command: systemctl disable {{.service}}
+    sudo: true
+
+  - name: logs
+    description: View service logs
+    params:
+      - name: service
+        type: string
+        required: true
+        prompt: "Service name"
+      - name: lines
+        type: string
+        default: "100"
+        prompt: "Number of lines"
+    command: journalctl -u {{.service}} -n {{.lines}} --no-pager
+    sudo: true
+
+  - name: logs-follow
+    description: Follow service logs in real-time
+    params:
+      - name: service
+        type: string
+        required: true
+        prompt: "Service name"
+    command: journalctl -u {{.service}} -f
+    sudo: true
+
+  - name: list-running
+    description: List running services
+    command: systemctl list-units --type=service --state=running
+    sudo: false
+
+  - name: list-failed
+    description: List failed services
+    command: systemctl list-units --type=service --state=failed
+    sudo: false
+
+  - name: list-enabled
+    description: List enabled services
+    command: systemctl list-unit-files --type=service --state=enabled
+    sudo: false
+
+  - name: daemon-reload
+    description: Reload systemd daemon
+    command: systemctl daemon-reload
+    sudo: true
+
+  - name: show-config
+    description: Show service configuration
+    params:
+      - name: service
+        type: string
+        required: true
+        prompt: "Service name"
+    command: systemctl cat {{.service}}
+    sudo: true

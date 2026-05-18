@@ -1,0 +1,86 @@
+category: network
+icon: "🌐"
+commands:
+  - name: show-interfaces
+    description: Show network interfaces
+    command: ip -c addr show
+    sudo: false
+
+  - name: show-routes
+    description: Show routing table
+    command: ip -c route show
+    sudo: false
+
+  - name: show-connections
+    description: Show active connections
+    command: ss -tunapl
+    sudo: true
+
+  - name: dns-check
+    description: Check DNS resolution
+    params:
+      - name: domain
+        type: string
+        required: true
+        prompt: "Domain to resolve"
+    command: dig +short {{.domain}}
+    sudo: false
+
+  - name: ping
+    description: Ping a host
+    params:
+      - name: host
+        type: string
+        required: true
+        prompt: "Host to ping"
+      - name: count
+        type: string
+        default: "4"
+        prompt: "Number of pings"
+    command: ping -c {{.count}} {{.host}}
+    sudo: false
+
+  - name: traceroute
+    description: Trace route to host
+    params:
+      - name: host
+        type: string
+        required: true
+        prompt: "Destination host"
+    command: traceroute {{.host}}
+    sudo: false
+
+  - name: listening-ports
+    description: Show listening ports
+    command: ss -tlnp
+    sudo: true
+
+  - name: interface-stats
+    description: Show interface statistics
+    command: ip -s link
+    sudo: false
+
+  - name: arp-table
+    description: Show ARP table
+    command: ip neigh show
+    sudo: false
+
+  - name: dns-servers
+    description: Show configured DNS servers
+    command: cat /etc/resolv.conf
+    sudo: false
+
+  - name: hostname-info
+    description: Show hostname information
+    command: hostnamectl
+    sudo: false
+
+  - name: curl-test
+    description: Test HTTP endpoint
+    params:
+      - name: url
+        type: string
+        required: true
+        prompt: "URL to test"
+    command: curl -I -s {{.url}}
+    sudo: false

@@ -1,0 +1,47 @@
+{
+  "servers": [
+    {
+      "id": "srv-001",
+      "hostname": "web-prod-01",
+      "ip": "192.168.1.10",
+      "os": "Rocky Linux 9",
+      "environment": "production",
+      "tags": ["web", "nginx", "frontend"],
+      "notes": "Main production web server"
+    },
+    {
+      "id": "srv-002",
+      "hostname": "db-prod-01",
+      "ip": "192.168.1.20",
+      "os": "Rocky Linux 9",
+      "environment": "production",
+      "tags": ["database", "postgresql", "primary"],
+      "notes": "Primary PostgreSQL database"
+    },
+    {
+      "id": "srv-003",
+      "hostname": "web-staging-01",
+      "ip": "192.168.2.10",
+      "os": "Rocky Linux 9",
+      "environment": "staging",
+      "tags": ["web", "nginx", "staging"],
+      "notes": "Staging web server"
+    }
+  ],
+  "networks": [
+    {
+      "id": "net-001",
+      "name": "production",
+      "cidr": "192.168.1.0/24",
+      "vlan": 100,
+      "gateway": "192.168.1.1"
+    },
+    {
+      "id": "net-002",
+      "name": "staging",
+      "cidr": "192.168.2.0/24",
+      "vlan": 200,
+      "gateway": "192.168.2.1"
+    }
+  ]
+}
