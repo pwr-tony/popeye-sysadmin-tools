@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Popeye</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --bg-item: #1c2128;
+            --bg-item-hover: #2d333b;
+            --accent: #58a6ff;
+            --accent-green: #7ee787;
+            --accent-purple: #a371f7;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --text-muted: #484f58;
+            --border: #30363d;
+            --danger: #f85149;
+            --warning: #d29922;
+        }
+        html, body { height: 100%; background: var(--bg-primary); color: var(--text-primary); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; overflow: hidden; }
+        #app { display: flex; height: 100vh; }
+
+        .sidebar { width: 220px; background: var(--bg-secondary); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+        .sidebar-header { padding: 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+        .sidebar-header .logo { font-size: 28px; }
+        .sidebar-header .title { font-size: 18px; font-weight: 700; color: var(--accent); }
+
+        .sidebar-tabs { display: flex; border-bottom: 1px solid var(--border); }
+        .sidebar-tab { flex: 1; padding: 10px; text-align: center; cursor: pointer; color: var(--text-secondary); font-weight: 500; font-size: 13px; border-bottom: 2px solid transparent; }
+        .sidebar-tab:hover { color: var(--text-primary); background: var(--bg-tertiary); }
+        .sidebar-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+        .sidebar-tab.docs-tab.active { color: var(--accent-purple); border-bottom-color: var(--accent-purple); }
+
+        .sidebar-actions { padding: 8px; border-bottom: 1px solid var(--border); display: flex; gap: 6px; }
+        .btn-small { padding: 6px 10px; font-size: 12px; background: var(--bg-tertiary); border: 1px solid var(--border); color: var(--text-secondary); border-radius: 6px; cursor: pointer; flex: 1; }
+        .btn-small:hover { background: var(--bg-item-hover); color: var(--text-primary); }
+        .btn-accent { background: var(--accent); color: #000; border-color: var(--accent); }
+        .btn-accent:hover { background: #79b8ff; }
+        .btn-purple { background: var(--accent-purple); color: #000; border-color: var(--accent-purple); }
+        .btn-purple:hover { background: #b88af8; }
+
+        .sidebar-categories { flex: 1; overflow-y: auto; padding: 8px; }
+        .category-item { display: flex; align-items: center; padding: 10px 12px; margin: 2px 0; border-radius: 6px; cursor: pointer; color: var(--text-secondary); }
+        .category-item:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+        .category-item.active { background: var(--accent); color: #000; }
+        .category-item.active.docs { background: var(--accent-purple); }
+        .category-item .icon { margin-right: 10px; }
+        .category-item .name { flex: 1; font-weight: 500; font-size: 13px; }
+        .category-item .count { font-size: 11px; background: var(--bg-tertiary); padding: 2px 8px; border-radius: 10px; }
+        .category-item.active .count { background: rgba(0,0,0,0.2); }
+
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .search-bar { padding: 12px 16px; background: var(--bg-secondary); border-bottom: 1px solid var(--border); display: flex; gap: 10px; }
+        .search-input { flex: 1; padding: 10px 14px; font-size: 14px; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); outline: none; }
+        .search-input:focus { border-color: var(--accent); }
+        .search-input::placeholder { color: var(--text-muted); }
+
+        .commands-container, .docs-container { flex: 1; overflow-y: auto; padding: 8px 16px; }
+        .command-card, .doc-card { background: var(--bg-item); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; margin: 8px 0; cursor: pointer; }
+        .command-card:hover, .doc-card:hover { background: var(--bg-item-hover); border-color: var(--accent); }
+        .doc-card:hover { border-color: var(--accent-purple); }
+        .command-card.selected, .doc-card.selected { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(88,166,255,0.2); }
+        .doc-card.selected { border-color: var(--accent-purple); box-shadow: 0 0 0 2px rgba(163,113,247,0.2); }
+        .command-header, .doc-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+        .command-icon, .doc-icon { font-size: 18px; }
+        .command-name, .doc-name { font-weight: 600; }
+        .command-category, .doc-category { color: var(--accent); font-size: 12px; }
+        .doc-category { color: var(--accent-purple); }
+        .command-badges { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+        .sudo-badge { background: var(--warning); color: #000; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
+        .command-desc { color: var(--text-secondary); font-size: 12px; margin-bottom: 10px; }
+        .command-code { background: var(--bg-primary); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; font-family: 'SF Mono', monospace; font-size: 12px; color: var(--accent-green); white-space: pre-wrap; word-break: break-all; position: relative; }
+        .copy-btn { position: absolute; top: 6px; right: 6px; background: var(--accent); border: none; color: #000; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: 600; }
+        .copy-btn:hover { background: #79b8ff; }
+        .copy-btn.copied { background: var(--accent-green); }
+
+        .command-actions, .doc-actions { display: flex; gap: 4px; }
+        .btn-icon { background: transparent; border: none; color: var(--text-muted); padding: 4px 6px; border-radius: 4px; cursor: pointer; font-size: 14px; line-height: 1; }
+        .btn-icon:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+        .btn-icon.delete:hover { color: var(--danger); }
+        .btn-danger { background: var(--danger); color: #fff; border-color: var(--danger); }
+        .btn-danger:hover { background: #f97583; }
+
+        /* Doc viewer */
+        .doc-viewer { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .doc-viewer-header { padding: 12px 16px; background: var(--bg-secondary); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+        .doc-viewer-title { flex: 1; font-weight: 600; font-size: 16px; }
+        .doc-viewer-content { flex: 1; overflow-y: auto; padding: 16px; }
+        .doc-viewer-content pre { white-space: pre-wrap; word-break: break-word; font-family: 'SF Mono', monospace; font-size: 13px; line-height: 1.6; color: var(--text-primary); }
+        .doc-editor { flex: 1; width: 100%; background: var(--bg-primary); border: none; color: var(--text-primary); font-family: 'SF Mono', monospace; font-size: 13px; line-height: 1.6; padding: 16px; resize: none; outline: none; }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 100; }
+        .modal-overlay.visible { display: flex; }
+        .modal { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 12px; padding: 24px; width: 450px; max-width: 90%; }
+        .modal-title { font-size: 18px; font-weight: 600; margin-bottom: 20px; }
+        .form-group { margin-bottom: 16px; }
+        .form-label { display: block; font-size: 13px; color: var(--text-secondary); margin-bottom: 6px; }
+        .form-input, .form-textarea { width: 100%; padding: 10px 12px; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 14px; outline: none; }
+        .form-input:focus, .form-textarea:focus { border-color: var(--accent); }
+        .form-textarea { min-height: 80px; font-family: 'SF Mono', monospace; resize: vertical; }
+        .form-checkbox { display: flex; align-items: center; gap: 8px; }
+        .form-checkbox input { width: 16px; height: 16px; }
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+        .btn { padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; border: 1px solid var(--border); }
+        .btn-cancel { background: var(--bg-tertiary); color: var(--text-primary); }
+        .btn-cancel:hover { background: var(--bg-item-hover); }
+        .btn-primary { background: var(--accent); color: #000; border-color: var(--accent); }
+        .btn-primary:hover { background: #79b8ff; }
+
+        .no-results { text-align: center; padding: 40px; color: var(--text-muted); }
+        .hidden { display: none !important; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-primary); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <span class="logo">🐱</span>
+                <span class="title">Popeye</span>
+            </div>
+            <div class="sidebar-tabs">
+                <div class="sidebar-tab active" id="tab-commands" onclick="switchTab('commands')">Commands</div>
+                <div class="sidebar-tab docs-tab" id="tab-docs" onclick="switchTab('docs')">Docs</div>
+            </div>
+            <div class="sidebar-actions" id="commands-actions">
+                <button class="btn-small" onclick="showAddCategoryModal()">+ Category</button>
+                <button class="btn-small btn-accent" onclick="showAddCommandModal()">+ Command</button>
+            </div>
+            <div class="sidebar-actions hidden" id="docs-actions">
+                <button class="btn-small btn-purple" onclick="showAddDocModal()">+ Document</button>
+            </div>
+            <div class="sidebar-categories" id="categories"></div>
+            <div class="sidebar-categories hidden" id="doc-categories"></div>
+        </div>
+        <div class="main-content" id="commands-view">
+            <div class="search-bar">
+                <input type="text" class="search-input" id="search" placeholder="Search commands..." autofocus />
+            </div>
+            <div class="commands-container" id="commands-list"></div>
+        </div>
+        <div class="main-content hidden" id="docs-view">
+            <div class="search-bar">
+                <input type="text" class="search-input" id="doc-search" placeholder="Search documents..." />
+            </div>
+            <div class="docs-container" id="docs-list"></div>
+        </div>
+        <div class="main-content hidden" id="doc-viewer-view">
+            <div class="doc-viewer">
+                <div class="doc-viewer-header">
+                    <button class="btn-icon" onclick="closeDocViewer()" title="Back">⬅️</button>
+                    <span class="doc-viewer-title" id="doc-viewer-title"></span>
+                    <button class="btn-icon" id="doc-edit-btn" onclick="toggleDocEdit()" title="Edit">✏️</button>
+                    <button class="btn-icon delete" onclick="deleteCurrentDoc()" title="Delete">🗑️</button>
+                </div>
+                <div class="doc-viewer-content" id="doc-viewer-content">
+                    <pre id="doc-content-pre"></pre>
+                </div>
+                <textarea class="doc-editor hidden" id="doc-editor"></textarea>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="category-modal">
+        <div class="modal">
+            <div class="modal-title">Add Category</div>
+            <div class="form-group">
+                <label class="form-label">Name</label>
+                <input type="text" class="form-input" id="cat-name" placeholder="e.g., docker" />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Icon (emoji)</label>
+                <input type="text" class="form-input" id="cat-icon" placeholder="e.g., 🐳" value="📁" />
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-cancel" onclick="hideModals()">Cancel</button>
+                <button class="btn btn-primary" onclick="addCategory()">Add Category</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="command-modal">
+        <div class="modal">
+            <div class="modal-title" id="cmd-modal-title">Add Command</div>
+            <input type="hidden" id="cmd-original-name" />
+            <input type="hidden" id="cmd-edit-mode" value="false" />
+            <div class="form-group">
+                <label class="form-label">Category</label>
+                <input type="text" class="form-input" id="cmd-category" placeholder="e.g., docker" list="category-list" />
+                <datalist id="category-list"></datalist>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Name</label>
+                <input type="text" class="form-input" id="cmd-name" placeholder="e.g., list-containers" />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <input type="text" class="form-input" id="cmd-desc" placeholder="e.g., List all Docker containers" />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Command</label>
+                <textarea class="form-textarea" id="cmd-command" placeholder="e.g., docker ps -a"></textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-checkbox">
+                    <input type="checkbox" id="cmd-sudo" />
+                    <span>Requires sudo</span>
+                </label>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-danger" id="cmd-delete-btn" onclick="deleteCurrentCommand()" style="display: none; margin-right: auto;">Delete</button>
+                <button class="btn btn-cancel" onclick="hideModals()">Cancel</button>
+                <button class="btn btn-primary" id="cmd-submit-btn" onclick="saveCommand()">Add Command</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="doc-modal">
+        <div class="modal">
+            <div class="modal-title">New Document</div>
+            <div class="form-group">
+                <label class="form-label">Category</label>
+                <input type="text" class="form-input" id="doc-category" placeholder="e.g., jenkins" list="doc-category-list" />
+                <datalist id="doc-category-list"></datalist>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Name</label>
+                <input type="text" class="form-input" id="doc-name" placeholder="e.g., deploy-guide.txt" />
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-cancel" onclick="hideModals()">Cancel</button>
+                <button class="btn btn-primary" onclick="createDoc()">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import {GetCommands, AddCategory, AddCommand, UpdateCommand, DeleteCommand, GetDocCategories, GetDocs, GetDocContent, SaveDocContent, CreateDoc, DeleteDoc} from './wailsjs/go/main/App.js';
+
+        let currentTab = 'commands';
+        let allCommands = [];
+        let filteredCommands = [];
+        let selectedCategory = 'all';
+        let selectedIndex = 0;
+
+        let allDocs = [];
+        let filteredDocs = [];
+        let selectedDocCategory = 'all';
+        let docCategories = [];
+        let currentDoc = null;
+        let isEditing = false;
+
+        const searchInput = document.getElementById('search');
+        const docSearchInput = document.getElementById('doc-search');
+        const commandsList = document.getElementById('commands-list');
+        const docsList = document.getElementById('docs-list');
+        const categoriesContainer = document.getElementById('categories');
+        const docCategoriesContainer = document.getElementById('doc-categories');
+
+        window.switchTab = async (tab) => {
+            // Save doc if editing before switching
+            if (isEditing && currentDoc) {
+                try {
+                    await SaveDocContent(currentDoc.path, document.getElementById('doc-editor').value);
+                } catch (e) { console.error(e); }
+            }
+            currentDoc = null;
+            isEditing = false;
+            currentTab = tab;
+            document.getElementById('tab-commands').classList.toggle('active', tab === 'commands');
+            document.getElementById('tab-docs').classList.toggle('active', tab === 'docs');
+            document.getElementById('commands-actions').classList.toggle('hidden', tab !== 'commands');
+            document.getElementById('docs-actions').classList.toggle('hidden', tab !== 'docs');
+            document.getElementById('categories').classList.toggle('hidden', tab !== 'commands');
+            document.getElementById('doc-categories').classList.toggle('hidden', tab !== 'docs');
+            document.getElementById('commands-view').classList.toggle('hidden', tab !== 'commands');
+            document.getElementById('docs-view').classList.toggle('hidden', tab !== 'docs');
+            document.getElementById('doc-viewer-view').classList.add('hidden');
+            if (tab === 'docs') await loadDocs();
+        };
+
+        window.showAddCategoryModal = () => {
+            document.getElementById('category-modal').classList.add('visible');
+            document.getElementById('cat-name').focus();
+        };
+
+        window.showAddCommandModal = () => {
+            document.getElementById('cmd-modal-title').textContent = 'Add Command';
+            document.getElementById('cmd-submit-btn').textContent = 'Add Command';
+            document.getElementById('cmd-delete-btn').style.display = 'none';
+            document.getElementById('cmd-edit-mode').value = 'false';
+            document.getElementById('cmd-original-name').value = '';
+            document.getElementById('cmd-category').disabled = false;
+            ['cmd-category','cmd-name','cmd-desc','cmd-command'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('cmd-sudo').checked = false;
+            const datalist = document.getElementById('category-list');
+            const cats = [...new Set(allCommands.map(c => c.category))];
+            datalist.innerHTML = cats.map(c => `<option value="${c}">`).join('');
+            document.getElementById('command-modal').classList.add('visible');
+            document.getElementById('cmd-category').focus();
+        };
+
+        window.showEditCommandModal = (cmd) => {
+            document.getElementById('cmd-modal-title').textContent = 'Edit Command';
+            document.getElementById('cmd-submit-btn').textContent = 'Save Changes';
+            document.getElementById('cmd-delete-btn').style.display = 'block';
+            document.getElementById('cmd-edit-mode').value = 'true';
+            document.getElementById('cmd-original-name').value = cmd.name;
+            document.getElementById('cmd-category').value = cmd.category;
+            document.getElementById('cmd-category').disabled = true;
+            document.getElementById('cmd-name').value = cmd.name;
+            document.getElementById('cmd-desc').value = cmd.description;
+            let cmdText = cmd.command;
+            if (cmd.sudo && cmdText.startsWith('sudo ')) {
+                cmdText = cmdText.substring(5);
+            }
+            document.getElementById('cmd-command').value = cmdText;
+            document.getElementById('cmd-sudo').checked = cmd.sudo;
+            document.getElementById('command-modal').classList.add('visible');
+            document.getElementById('cmd-name').focus();
+        };
+
+        window.showAddDocModal = () => {
+            const datalist = document.getElementById('doc-category-list');
+            datalist.innerHTML = docCategories.filter(c => c.name !== 'root').map(c => `<option value="${c.name}">`).join('');
+            document.getElementById('doc-category').value = selectedDocCategory === 'all' ? '' : selectedDocCategory;
+            document.getElementById('doc-name').value = '';
+            document.getElementById('doc-modal').classList.add('visible');
+            document.getElementById('doc-name').focus();
+        };
+
+        window.hideModals = () => {
+            document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('visible'));
+            document.getElementById('cmd-category').disabled = false;
+        };
+
+        window.addCategory = async () => {
+            const name = document.getElementById('cat-name').value.trim();
+            const icon = document.getElementById('cat-icon').value.trim() || '📁';
+            if (!name) return alert('Name required');
+            try {
+                await AddCategory(name, icon);
+                window.hideModals();
+                document.getElementById('cat-name').value = '';
+                await init();
+            } catch (e) { alert('Error: ' + e); }
+        };
+
+        window.saveCommand = async () => {
+            const isEditMode = document.getElementById('cmd-edit-mode').value === 'true';
+            const cat = document.getElementById('cmd-category').value.trim();
+            const name = document.getElementById('cmd-name').value.trim();
+            const desc = document.getElementById('cmd-desc').value.trim();
+            const cmd = document.getElementById('cmd-command').value.trim();
+            const sudo = document.getElementById('cmd-sudo').checked;
+            if (!cat || !name || !cmd) return alert('Category, name and command required');
+            try {
+                if (isEditMode) {
+                    const originalName = document.getElementById('cmd-original-name').value;
+                    await UpdateCommand(cat, originalName, name, desc, cmd, sudo);
+                } else {
+                    await AddCommand(cat, name, desc, cmd, sudo);
+                }
+                window.hideModals();
+                ['cmd-category','cmd-name','cmd-desc','cmd-command'].forEach(id => document.getElementById(id).value = '');
+                document.getElementById('cmd-sudo').checked = false;
+                await init();
+            } catch (e) { alert('Error: ' + e); }
+        };
+
+        window.deleteCurrentCommand = async () => {
+            const cat = document.getElementById('cmd-category').value.trim();
+            const originalName = document.getElementById('cmd-original-name').value;
+            if (!confirm(`Delete command "${originalName}"?`)) return;
+            try {
+                await DeleteCommand(cat, originalName);
+                window.hideModals();
+                await init();
+            } catch (e) { alert('Error: ' + e); }
+        };
+
+        window.deleteCommand = async (category, name) => {
+            if (!confirm(`Delete command "${name}"?`)) return;
+            try {
+                await DeleteCommand(category, name);
+                await init();
+            } catch (e) { alert('Error: ' + e); }
+        };
+
+        window.copyCmd = async (btn, text) => {
+            try {
+                await navigator.clipboard.writeText(text);
+                btn.textContent = 'Copied!';
+                btn.classList.add('copied');
+                setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
+            } catch (e) { console.error(e); }
+        };
+
+        window.createDoc = async () => {
+            const cat = document.getElementById('doc-category').value.trim() || 'root';
+            const name = document.getElementById('doc-name').value.trim();
+            if (!name) return alert('Name required');
+            try {
+                await CreateDoc(cat, name);
+                window.hideModals();
+                await loadDocs();
+            } catch (e) { alert('Error: ' + e); }
+        };
+
+        window.openDoc = async (doc) => {
+            try {
+                const content = await GetDocContent(doc.path);
+                currentDoc = doc;
+                isEditing = false;
+                document.getElementById('doc-viewer-title').textContent = doc.name;
+                document.getElementById('doc-content-pre').textContent = content;
+                document.getElementById('doc-editor').value = content;
+                document.getElementById('doc-viewer-content').classList.remove('hidden');
+                document.getElementById('doc-editor').classList.add('hidden');
+                document.getElementById('doc-edit-btn').textContent = '✏️';
+                document.getElementById('docs-view').classList.add('hidden');
+                document.getElementById('doc-viewer-view').classList.remove('hidden');
+            } catch (e) { alert('Error loading document: ' + e); }
+        };
+
+        window.closeDocViewer = async () => {
+            if (isEditing) {
+                try {
+                    await SaveDocContent(currentDoc.path, document.getElementById('doc-editor').value);
+                } catch (e) { alert('Error saving: ' + e); }
+            }
+            document.getElementById('doc-viewer-view').classList.add('hidden');
+            document.getElementById('docs-view').classList.remove('hidden');
+            currentDoc = null;
+            isEditing = false;
+            await loadDocs();
+        };
+
+        window.toggleDocEdit = async () => {
+            if (isEditing) {
+                try {
+                    const content = document.getElementById('doc-editor').value;
+                    await SaveDocContent(currentDoc.path, content);
+                    document.getElementById('doc-content-pre').textContent = content;
+                } catch (e) { alert('Error saving: ' + e); return; }
+            }
+            isEditing = !isEditing;
+            document.getElementById('doc-viewer-content').classList.toggle('hidden', isEditing);
+            document.getElementById('doc-editor').classList.toggle('hidden', !isEditing);
+            document.getElementById('doc-edit-btn').textContent = isEditing ? '💾' : '✏️';
+            document.getElementById('doc-edit-btn').title = isEditing ? 'Save' : 'Edit';
+            if (isEditing) document.getElementById('doc-editor').focus();
+        };
+
+        window.deleteCurrentDoc = async () => {
+            if (!currentDoc) return;
+            if (!confirm(`Delete "${currentDoc.name}"?`)) return;
+            try {
+                await DeleteDoc(currentDoc.path);
+                window.closeDocViewer();
+            } catch (e) { alert('Error: ' + e); }
+        };
+
+        async function init() {
+            try {
+                allCommands = await GetCommands() || [];
+                renderCategories();
+                filterCommands();
+            } catch (e) {
+                commandsList.innerHTML = '<div class="no-results">Error loading commands</div>';
+            }
+        }
+
+        async function loadDocs() {
+            try {
+                docCategories = await GetDocCategories() || [];
+                renderDocCategories();
+
+                if (selectedDocCategory === 'all') {
+                    allDocs = [];
+                    for (const cat of docCategories) {
+                        const docs = await GetDocs(cat.name) || [];
+                        allDocs = allDocs.concat(docs);
+                    }
+                } else {
+                    allDocs = await GetDocs(selectedDocCategory) || [];
+                }
+                filterDocs();
+            } catch (e) {
+                docsList.innerHTML = '<div class="no-results">Error loading documents</div>';
+            }
+        }
+
+        function renderCategories() {
+            const cats = {};
+            allCommands.forEach(cmd => {
+                if (!cats[cmd.category]) cats[cmd.category] = { icon: cmd.icon, count: 0, isUser: cmd.isUser };
+                cats[cmd.category].count++;
+            });
+
+            let html = `<div class="category-item ${selectedCategory === 'all' ? 'active' : ''}" data-category="all">
+                <span class="icon">📋</span><span class="name">All</span><span class="count">${allCommands.length}</span>
+            </div>`;
+
+            Object.entries(cats).forEach(([name, d]) => {
+                html += `<div class="category-item ${selectedCategory === name ? 'active' : ''}" data-category="${name}">
+                    <span class="icon">${d.icon}</span><span class="name">${name}</span><span class="count">${d.count}</span>
+                </div>`;
+            });
+
+            categoriesContainer.innerHTML = html;
+            document.querySelectorAll('#categories .category-item').forEach(item => {
+                item.addEventListener('click', () => { selectedCategory = item.dataset.category; renderCategories(); filterCommands(); });
+            });
+        }
+
+        function renderDocCategories() {
+            const total = docCategories.reduce((sum, c) => sum + c.count, 0);
+            let html = `<div class="category-item docs ${selectedDocCategory === 'all' ? 'active' : ''}" data-category="all">
+                <span class="icon">📚</span><span class="name">All</span><span class="count">${total}</span>
+            </div>`;
+
+            docCategories.forEach(cat => {
+                const icon = cat.name === 'root' ? '📄' : '📁';
+                html += `<div class="category-item docs ${selectedDocCategory === cat.name ? 'active' : ''}" data-category="${cat.name}">
+                    <span class="icon">${icon}</span><span class="name">${cat.name}</span><span class="count">${cat.count}</span>
+                </div>`;
+            });
+
+            docCategoriesContainer.innerHTML = html;
+            document.querySelectorAll('#doc-categories .category-item').forEach(item => {
+                item.addEventListener('click', () => { selectedDocCategory = item.dataset.category; loadDocs(); });
+            });
+        }
+
+        function filterCommands() {
+            const q = searchInput.value.toLowerCase();
+            filteredCommands = allCommands.filter(cmd => {
+                const matchCat = selectedCategory === 'all' || cmd.category === selectedCategory;
+                const matchQ = !q || cmd.name.toLowerCase().includes(q) || cmd.description.toLowerCase().includes(q) || cmd.command.toLowerCase().includes(q);
+                return matchCat && matchQ;
+            });
+            selectedIndex = 0;
+            renderCommands();
+        }
+
+        function filterDocs() {
+            const q = docSearchInput.value.toLowerCase();
+            filteredDocs = allDocs.filter(doc => {
+                const matchQ = !q || doc.name.toLowerCase().includes(q) || doc.category.toLowerCase().includes(q);
+                return matchQ;
+            });
+            renderDocs();
+        }
+
+        function renderCommands() {
+            if (!filteredCommands.length) { commandsList.innerHTML = '<div class="no-results">No commands found</div>'; return; }
+
+            commandsList.innerHTML = filteredCommands.map((cmd, i) => {
+                const escaped = cmd.command.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                const cmdJson = JSON.stringify(cmd).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                return `<div class="command-card ${i === selectedIndex ? 'selected' : ''}">
+                    <div class="command-header">
+                        <span class="command-icon">${cmd.icon}</span>
+                        <span class="command-name">${cmd.name}</span>
+                        <span class="command-category">${cmd.category}</span>
+                        <div class="command-badges">
+                            ${cmd.sudo ? '<span class="sudo-badge">SUDO</span>' : ''}
+                            ${cmd.isUser ? `<div class="command-actions"><button class="btn-icon" onclick="event.stopPropagation(); showEditCommandModal(JSON.parse('${cmdJson.replace(/'/g, "\\'")}'))" title="Edit">✏️</button><button class="btn-icon delete" onclick="event.stopPropagation(); deleteCommand('${cmd.category}', '${cmd.name.replace(/'/g, "\\'")}')" title="Delete">🗑️</button></div>` : ''}
+                        </div>
+                    </div>
+                    <div class="command-desc">${cmd.description}</div>
+                    <div class="command-code"><button class="copy-btn" onclick="copyCmd(this, \`${cmd.command.replace(/`/g, '\\`').replace(/\\/g, '\\\\')}\`)">Copy</button>${escaped}</div>
+                </div>`;
+            }).join('');
+        }
+
+        function renderDocs() {
+            if (!filteredDocs.length) { docsList.innerHTML = '<div class="no-results">No documents found</div>'; return; }
+
+            docsList.innerHTML = filteredDocs.map(doc => {
+                const docJson = JSON.stringify(doc).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                return `<div class="doc-card" onclick="openDoc(JSON.parse('${docJson.replace(/'/g, "\\'")}'))">
+                    <div class="doc-header">
+                        <span class="doc-icon">📄</span>
+                        <span class="doc-name">${doc.name}</span>
+                        <span class="doc-category">${doc.category}</span>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        searchInput.addEventListener('input', filterCommands);
+        docSearchInput.addEventListener('input', filterDocs);
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowDown' && selectedIndex < filteredCommands.length - 1) { selectedIndex++; renderCommands(); }
+            else if (e.key === 'ArrowUp' && selectedIndex > 0) { selectedIndex--; renderCommands(); }
+            else if (e.key === 'Escape') { searchInput.value = ''; filterCommands(); }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') window.hideModals();
+        });
+
+        init();
+    </script>
+</body>
+</html>
